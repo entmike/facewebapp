@@ -129,18 +129,26 @@ module.exports = options=>{
 							
 					])
 					.then((promiseData)=>{
-						if(promiseData[0].Body && promiseData[1].Items && promiseData[1].Items[0].faceIndex){
-							var file = new Buffer(promiseData[0].Body);
-							cache.data = {
-								s3Object : promiseData[0],
-								dynamoObject : promiseData[1].Items[0],
-								formats : {
-									original : file
-								},
-								gzip : {}
-							}
+						cache.data = {
+							formats : {},
+							gzip : {}
+						};
+						if(promiseData[0] && promiseData[0].Body){
+							cache.data.s3Object = promiseData[0];
+							cache.data.formats.original = cache.data.s3Object.Body;
+						}
+						var file = new Buffer(promiseData[0].Body);
+						var originalImage = sharp(file);
+						if(promiseData[1] && 
+							promiseData[1].Items && 
+							promiseData[1].Items[0] && 
+							promiseData[1].Items[0].faceIndex){
+							cache.data.dynamoObject = promiseData[1].Items[0];
+						}else{
+							cache.data.dynamoObject = null;
+						}
+						if(cache.data.dynamoObject){
 							var faces = [];
-							var originalImage = sharp(file);
 							originalImage.metadata().then((metadata)=>{
 								for(face of cache.data.dynamoObject.faceIndex.FaceRecords){
 									faces.push({coords : computeCoords(face,metadata) });
@@ -185,7 +193,8 @@ module.exports = options=>{
 								});
 							});
 						}else{
-							reject("404");
+							cache.data.formats.showfaces = null;
+							resolve(cache);
 						}
 					})
 					.catch(err=>{

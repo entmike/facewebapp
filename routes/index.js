@@ -12,7 +12,7 @@ module.exports = options=>{
 		ContentUtils.createList(options.bucketName).then(list=>{
 			res.render('index', { list: list });
 		}).catch(err=>{
-			
+			res.end(err);
 		});
 	});
 	return router;

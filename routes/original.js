@@ -15,11 +15,9 @@ module.exports = options=>{
 			bucket : options.bucketName,
 			bucketKey : bucketKey
 		}).then(image=>{
-			// res.sendFile(image);
-			console.log(image);
 			res.end(image.data.formats.original);
 		}).catch(err=>{
-			// response.end(err.message);
+			res.end(err);
 		});
 	});
 	return router;

@@ -5,7 +5,10 @@ block content
   ul
     each item in list
       li
-        a(href= "/showfaces/"+item.s3.Key) #{item.s3.Key}
+        if item.db.Count > 0
+          a(href= "/showfaces/"+item.s3.Key) #{item.s3.Key}
+        else
+          span= item.s3.Key
         |  - (
         a(href= "/original/"+item.s3.Key) Original
         | )
