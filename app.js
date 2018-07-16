@@ -5,7 +5,9 @@ AWS.config.update({
 });
 const appConfig = {
 	AWS : AWS,
-	bucketName : "com.entmike.miketest2"
+	bucketName : "com.entmike.miketest2",
+	rekognitionCollection : "mike",
+	table : "imageInfo"
 };
 var createError = require('http-errors');
 var express = require('express');
@@ -31,6 +33,7 @@ app.use('/', indexRouter(appConfig));
 app.use('/showface/*', require('./routes/showface')(appConfig));
 app.use('/showfaces/*', require('./routes/showfaces')(appConfig));
 app.use('/original/*', require('./routes/original')(appConfig));
+app.use('/process/*', require('./routes/process')(appConfig));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
