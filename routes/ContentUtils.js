@@ -1,5 +1,3 @@
-const querystring = require("querystring");
-
 module.exports = options=>{
 	const AWS = options.AWS;
 	const dynamodb = new AWS.DynamoDB({
