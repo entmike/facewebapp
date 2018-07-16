@@ -1,0 +1,17 @@
+extends layout
+
+block content
+  h1 Files
+  ul
+    each item in list
+      li
+        a(href= "/showfaces/"+item.s3.Key) #{item.s3.Key}
+        |  - (
+        a(href= "/original/"+item.s3.Key) Original
+        | )
+        if item.db.Items
+          if item.db.Items[0]
+           ul
+              each subitem in item.db.Items[0].faceIndex.FaceRecords
+                li
+                  a(href= "/showface/"+item.s3.Key+"?face="+subitem.Face.FaceId) #{subitem.Face.FaceId}
