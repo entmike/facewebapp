@@ -34,6 +34,8 @@ app.use('/showface/*', require('./routes/showface')(appConfig));
 app.use('/showfaces/*', require('./routes/showfaces')(appConfig));
 app.use('/original/*', require('./routes/original')(appConfig));
 app.use('/process/*', require('./routes/process')(appConfig));
+app.use('/process-opencv/*', require('./routes/process-opencv')(appConfig));
+app.use('/delete/*', require('./routes/delete')(appConfig));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

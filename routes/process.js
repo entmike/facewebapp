@@ -13,7 +13,7 @@ module.exports = options=>{
 			rekognitionCollection : options.rekognitionCollection,
 			table : options.table
 		};
-		require('./Rekog').process(rekogOptions).then(data=>{
+		require('./OpenCVRecog').processRekog(rekogOptions).then(data=>{
 			res.end(data);
 		}).catch(err=>{
 			res.end(err);
