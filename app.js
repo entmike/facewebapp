@@ -32,6 +32,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter(appConfig));
 app.use('/showface/*', require('./routes/showface')(appConfig));
 app.use('/showfaces/*', require('./routes/showfaces')(appConfig));
+app.use('/showfacescv/*', require('./routes/showfacesCV')(appConfig));
 app.use('/original/*', require('./routes/original')(appConfig));
 app.use('/process/*', require('./routes/process')(appConfig));
 app.use('/process-opencv/*', require('./routes/process-opencv')(appConfig));

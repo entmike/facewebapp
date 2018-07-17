@@ -40,7 +40,7 @@ module.exports = options=>{
 						promises.push(
 							docClient.query({
 								TableName: "imageInfo",
-								ProjectionExpression:"faceDetails, processedOn, test, faceIndex",
+								ProjectionExpression:"faceDetails, processedOn, faceIndex, cvData",
 								KeyConditionExpression: "#bucket = :bucket and image = :image",
 								ExpressionAttributeNames:{
 									"#bucket": "bucket"

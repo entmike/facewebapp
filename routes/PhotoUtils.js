@@ -20,8 +20,7 @@ module.exports = options=>{
 	};
 	var requestCache = {};
 	var faceCache = {};
-	var computeCoords = (face, metadata)=>{
-		var box = face.Face.BoundingBox;
+	var computeCoords = (box, metadata)=>{
 		var coords = {
 			left : parseInt(box.Left * metadata.width),
 			top : parseInt(box.Top * metadata.height),
@@ -41,8 +40,79 @@ module.exports = options=>{
 		if(coords.top + coords.height > metadata.height) coords.height = metadata.height - coords.top;
 		return coords;
 	}
+	var metadataPromises = options=>{
+		return [
+			s3.getObject({ Bucket : options.bucket, Key : options.bucketKey }).promise(),
+			docClient.query({
+				TableName: "imageInfo",
+				ProjectionExpression:"faceIndex, cvData",
+				KeyConditionExpression: "#bucket = :bucket and image = :image",
+				ExpressionAttributeNames:{
+					"#bucket": "bucket"
+				},
+				ExpressionAttributeValues: {
+					":bucket" : options.bucket,
+					":image" : options.bucketKey
+				}
+			}).promise()
+		];
+	}
 	return {
-		showFace : (options)=>{
+		showFaceCV : options=>{
+			return new Promise((resolve, reject)=>{
+				var bucketKey = options.bucketKey;
+				var bucket = options.bucket;
+				var cacheKey = options.bucketKey+"-cv-"+options.face;
+				faceCache[cacheKey] = faceCache[cacheKey] || {};
+				var cache = faceCache[cacheKey];
+				if(cache.data){
+					resolve(cache);
+				}else{
+					Promise.all(metadataPromises({
+						bucket : options.bucket,
+						bucketKey : options.bucketKey
+					})).then(promiseData=>{
+						if(promiseData[0].Body && promiseData[1].Items && promiseData[1].Items[0].cvData){
+							var file = new Buffer(promiseData[0].Body);
+							var dbData = promiseData[1];
+							var item = promiseData[1].Items[0];
+							var originalImage = sharp(file);
+							var foundFace = null;
+							if(!item.cvData[options.face]){
+								reject("Invalid face ID");
+							}else{
+								foundFace = item.cvData[options.face];
+								console.log(foundFace);
+								var originalImage = sharp(file);
+								originalImage.metadata().then((metadata)=>{
+									var coords = computeCoords({
+										Left : foundFace.x / metadata.width,
+										Top : foundFace.y / metadata.height,
+										Width : foundFace.width / metadata.width,
+										Height : foundFace.height / metadata.height
+									}, metadata);
+									originalImage.clone().extract(coords).toBuffer().then(faceFile=>{
+										cache.data = {
+											s3Object : promiseData[0],
+											dynamoObject : dbData,
+											formats : {
+												original : file,
+												cvface : faceFile
+											},
+											gzip : {}
+										};
+										resolve(cache);
+									})
+								});
+							}
+						}else{
+							reject("Sad face");
+						}
+					});
+				}
+			});
+		},
+		showFace : options=>{
 			return new Promise((resolve, reject)=>{
 				var bucketKey = options.bucketKey;
 				var bucket = options.bucket;
@@ -52,21 +122,10 @@ module.exports = options=>{
 				if(cache.data){
 					resolve(cache);
 				}else{
-					Promise.all([
-						s3.getObject({ Bucket : bucket, Key : bucketKey }).promise(),
-						docClient.query({
-							TableName: "imageInfo",
-							ProjectionExpression:"faceIndex",
-							KeyConditionExpression: "#bucket = :bucket and image = :image",
-							ExpressionAttributeNames:{
-								"#bucket": "bucket"
-							},
-							ExpressionAttributeValues: {
-								":bucket" : bucket,
-								":image" : bucketKey
-							}
-						}).promise()
-					]).then(promiseData=>{
+					Promise.all(metadataPromises({
+						bucket : options.bucket,
+						bucketKey : options.bucketKey
+					})).then(promiseData=>{
 						if(promiseData[0].Body && promiseData[1].Items && promiseData[1].Items[0].faceIndex){
 							var file = new Buffer(promiseData[0].Body);
 							var item = promiseData[1].Items[0];
@@ -83,7 +142,7 @@ module.exports = options=>{
 							}else{
 								var originalImage = sharp(file);
 								originalImage.metadata().then((metadata)=>{
-									var coords = computeCoords(foundFace,metadata);
+									var coords = computeCoords(foundFace.Face.BoundingBox,metadata);
 									originalImage.clone().extract(coords).toBuffer().then(faceFile=>{
 										cache.data = {
 											s3Object : promiseData[0],
@@ -116,7 +175,7 @@ module.exports = options=>{
 						s3.getObject({ Bucket : bucket, Key : bucketKey }).promise()/*.catch(err=>{reject(err)})*/,
 						docClient.query({
 							TableName: "imageInfo",
-							ProjectionExpression:"faceIndex",
+							ProjectionExpression:"faceIndex, cvData",
 							KeyConditionExpression: "#bucket = :bucket and image = :image",
 							ExpressionAttributeNames:{
 								"#bucket": "bucket"
@@ -139,29 +198,52 @@ module.exports = options=>{
 						}
 						var file = new Buffer(promiseData[0].Body);
 						var originalImage = sharp(file);
-						if(promiseData[1] && 
-							promiseData[1].Items && 
-							promiseData[1].Items[0] && 
-							promiseData[1].Items[0].faceIndex){
-							cache.data.dynamoObject = promiseData[1].Items[0];
-						}else{
-							cache.data.dynamoObject = null;
-						}
-						if(cache.data.dynamoObject){
-							var faces = [];
-							originalImage.metadata().then((metadata)=>{
-								for(face of cache.data.dynamoObject.faceIndex.FaceRecords){
-									faces.push({coords : computeCoords(face,metadata) });
+						var dbData = promiseData[1];
+						cache.data.dynamoObject = promiseData[1]
+						var cvFaces = [];
+						var faces = [];
+						originalImage.metadata().then((metadata)=>{
+							if(dbData && 
+								dbData.Items && 
+								dbData.Items[0] && 
+								dbData.Items[0].faceIndex){
+								for(face of dbData.Items[0].faceIndex.FaceRecords){
+									faces.push({coords : computeCoords(face.Face.BoundingBox, metadata) });
 								}
-								return(faces)
-							}).then(data=>{
-								for(face of data){
+							}
+							if(dbData && 
+								dbData.Items && 
+								dbData.Items[0] && 
+								dbData.Items[0].cvData){
+								for(face of dbData.Items[0].cvData){
+									cvFaces.push({coords : computeCoords({
+										Left : face.x / metadata.width,
+										Top : face.y / metadata.height,
+										Width : face.width / metadata.width,
+										Height : face.height / metadata.height
+									},metadata) });
+								}
+							}
+							return{
+								showfaces : faces,
+								cvFaces : cvFaces
+							};
+						}).then(data=>{
+							for(faceType in data){
+								for(face of data[faceType]){
 									face.img = originalImage.clone().extract(face.coords);
 								}
-							}).then(()=>{
-								originalImage
-									.grayscale()
-									.blur(5);
+							}
+							return data;
+						}).then(facedata=>{
+							console.log(facedata);
+							var allPromises = [];
+							for(faceType in facedata){
+								allPromises.push(new Promise((typeResolve,typeReject)=>{
+								var ft = faceType;
+								var originalImage = sharp(file);
+								var faces = facedata[faceType];
+								originalImage.grayscale().blur(5);
 								var promises = [];
 								for(var face of faces){
 									promises.push(face.img.toBuffer());
@@ -171,31 +253,36 @@ module.exports = options=>{
 										throw(err);
 									})
 									.then(buffers=>{
-									for(var i=0;i<buffers.length;i++){
-										faces[i].buffer = buffers[i];
-									}
-									var workaround = faces.reduce(function(input,overlay){
-										return input.then( function(data) {
-											return sharp(data).overlayWith(overlay.buffer, { 
-												left : overlay.coords.left, 
-												top : overlay.coords.top
-											}).toBuffer().catch(err=>{throw(err);});
-										});
-									}, originalImage.toBuffer().catch(err=>{throw(err);}));
-									workaround
-										.catch(err=>{
-											throw(err);
-										})
-										.then(data=>{
-											cache.data.formats.showfaces = data;
-											resolve(cache);
-										});
-								});
+										for(var i=0;i<buffers.length;i++){
+											console.log(i);
+											faces[i].buffer = buffers[i];
+										}
+										console.log(ft);
+										var workaround = faces.reduce(function(input,overlay){
+											return input.then( function(data) {
+												return sharp(data).overlayWith(overlay.buffer, { 
+													left : overlay.coords.left, 
+													top : overlay.coords.top
+												}).toBuffer().catch(err=>{throw(err);});
+											});
+										}, originalImage.toBuffer().catch(err=>{throw(err);}));
+										workaround
+											.catch(err=>{
+												throw(err);
+											})
+											.then(data=>{
+												cache.data.formats[ft] = data;
+												typeResolve(cache);
+											});
+									});
+								}));
+							}
+							console.log("Running all promises");
+							Promise.all(allPromises).then(data=>{
+								console.log(data);
+								resolve(cache);
 							});
-						}else{
-							cache.data.formats.showfaces = null;
-							resolve(cache);
-						}
+						});
 					})
 					.catch(err=>{
 						reject(err);

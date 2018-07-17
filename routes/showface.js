@@ -11,18 +11,29 @@ module.exports = options=>{
 	/* GET face. */
 	router.get('/', function(req, res, next) {
 		var bucketKey = req.baseUrl.replace(/^\/showface\/+/g, '');
-		console.log(req.query.face);
-		PhotoUtils.showFace({
-			bucket : options.bucketName,
-			bucketKey : bucketKey,
-			face : req.query.face
-		}).then(image=>{
-			// res.sendFile(image);
-			console.log(image);
-			res.end(image.data.formats.face);
-		}).catch(err=>{
-			// response.end(err.message);
-		});
+		if(req.query.face){
+			PhotoUtils.showFace({
+				bucket : options.bucketName,
+				bucketKey : bucketKey,
+				face : req.query.face
+			}).then(image=>{
+				res.end(image.data.formats.face);
+			}).catch(err=>{
+				// response.end(err.message);
+			});
+		}else if(req.query.cvface){
+			PhotoUtils.showFaceCV({
+				bucket : options.bucketName,
+				bucketKey : bucketKey,
+				face : req.query.cvface
+			}).then(image=>{
+				res.end(image.data.formats.cvface);
+			}).catch(err=>{
+				// response.end(err.message);
+			});
+		}else{
+			res.end("No Face ID given.");
+		}
 	});
 	return router;
 }

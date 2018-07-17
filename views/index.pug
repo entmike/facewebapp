@@ -5,12 +5,12 @@ block content
   ul
     each item in list
       li
-        if item.db.Count > 0
-          a(href= "/showfaces/"+item.s3.Key) #{item.s3.Key}
-        else
-          span= item.s3.Key
+        a(href= "/original/"+item.s3.Key) #{item.s3.Key}
         |  - (
-        a(href= "/original/"+item.s3.Key) Original
+        a(href= "/showfaces/"+item.s3.Key) Highlight Rekognition Faces
+        | )
+        |  - (
+        a(href= "/showfacescv/"+item.s3.Key) Highlight OpenCV Faces
         | )
         |  - (
         a(href= "/delete/"+item.s3.Key) Delete Metadata
@@ -24,15 +24,15 @@ block content
         if item.db.Items
           if item.db.Items[0]
             if item.db.Items[0].faceIndex
-              span Rekognition Data
+              p Rekognition Data
               ul
                 each subitem in item.db.Items[0].faceIndex.FaceRecords
                   li
                     a(href= "/showface/"+item.s3.Key+"?face="+subitem.Face.FaceId) #{subitem.Face.FaceId}
             if item.db.Items[0].cvData
-              span OpenCV Data
+              p OpenCV Data
               ul
-                each subitem in item.db.Items[0].faceIndex.FaceRecords
+                each subitem, index in item.db.Items[0].cvData
                   li
-                    a(href= "/showface/"+item.s3.Key+"?face="+subitem.Face.FaceId) #{subitem.Face.FaceId}
+                    a(href= "/showface/"+item.s3.Key+"?cvface="+index) #{index}
 

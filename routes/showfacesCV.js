@@ -10,13 +10,12 @@ module.exports = options=>{
 
 	/* GET face. */
 	router.get('/', function(req, res, next) {
-		var bucketKey = req.baseUrl.replace(/^\/showfaces\/+/g, '');
+		var bucketKey = req.baseUrl.replace(/^\/showfacescv\/+/g, '');
 		PhotoUtils.showFaces({
 			bucket : options.bucketName,
 			bucketKey : bucketKey
 		}).then(image=>{
-			console.log(image.data.formats);
-			res.end(image.data.formats.showfaces);
+			res.end(image.data.formats.cvFaces);
 		}).catch(err=>{
 			res.end(err);
 		});
