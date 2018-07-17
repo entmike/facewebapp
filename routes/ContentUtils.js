@@ -1,5 +1,5 @@
-module.exports = options=>{
-	const AWS = options.AWS;
+module.exports = appConfig=>{
+	const AWS = appConfig.AWS;
 	const dynamodb = new AWS.DynamoDB({
 		apiVersion: '2012-08-10'
 	});

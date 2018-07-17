@@ -1,20 +1,21 @@
 var express = require('express');
 
-module.exports = options=>{
+module.exports = appConfig=>{
 	var router = express.Router();
 
 	/* Delete face metadata. */
 	router.get('/', function(req, res, next) {
 		var bucketKey = req.baseUrl.replace(/^\/delete\/+/g, '');
-		const docClient = new options.AWS.DynamoDB.DocumentClient();
+		const docClient = new appConfig.AWS.DynamoDB.DocumentClient();
 		docClient.delete({
-			TableName : options.table,
+			TableName : appConfig.table,
 			Key : {
-				bucket : options.bucketName,
+				bucket : appConfig.bucketName,
 				image : bucketKey
 			}
 		}).promise().then(data=>{
 			console.log(data);
+			appConfig.utils.CacheUtils.clear("requestCache", bucketKey);
 			res.end("Metadata deleted.");
 		}).catch(err=>{
 			res.end(err.message);

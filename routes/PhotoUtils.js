@@ -1,5 +1,5 @@
-module.exports = options=>{
-	const AWS = options.AWS;
+module.exports = appConfig=>{
+	const AWS = appConfig.AWS;
 	const dynamodb = new AWS.DynamoDB({
 		apiVersion: '2012-08-10'
 	});
@@ -18,8 +18,8 @@ module.exports = options=>{
 		if (day.length < 2) day = '0' + day;
 		return [year, month, day].join('-');
 	};
-	var requestCache = {};
-	var faceCache = {};
+	var requestCache = appConfig.context.cache.requestCache;
+	var faceCache = appConfig.context.cache.faceCache;
 	var computeCoords = (box, metadata)=>{
 		var coords = {
 			left : parseInt(box.Left * metadata.width),

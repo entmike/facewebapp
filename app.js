@@ -3,12 +3,26 @@ AWS.config.update({
 	region: "us-west-2",
 	credentials : new AWS.SharedIniFileCredentials({profile: 'personal-account'})
 });
-const appConfig = {
-	AWS : AWS,
-	bucketName : "com.entmike.miketest2",
-	rekognitionCollection : "mike",
-	table : "imageInfo"
+var appConfig = {
+  AWS : AWS,
+  bucketName : "com.entmike.miketest2",
+  rekognitionCollection : "mike",
+  table : "imageInfo",
+  context : {
+    recognition : {
+      lbphFile : "/facewebapp/data/model"
+    },
+    cache : {
+      requestCache : {},
+      faceCache : {}
+    }
+  },
+  utils : {}
 };
+
+appConfig.utils.CacheUtils = require('./CacheUtils')(appConfig);
+appConfig.utils.LBPHUtils = require('./LBPHUtils')(appConfig);
+
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
@@ -33,6 +47,7 @@ app.use('/', indexRouter(appConfig));
 app.use('/showface/*', require('./routes/showface')(appConfig));
 app.use('/showfaces/*', require('./routes/showfaces')(appConfig));
 app.use('/showfacescv/*', require('./routes/showfacesCV')(appConfig));
+app.use('/train/*', require('./routes/train')(appConfig));
 app.use('/original/*', require('./routes/original')(appConfig));
 app.use('/process/*', require('./routes/process')(appConfig));
 app.use('/process-opencv/*', require('./routes/process-opencv')(appConfig));

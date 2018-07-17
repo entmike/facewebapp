@@ -7,19 +7,20 @@ if (!cv.xmodules.face) {
 const classifier = new cv.CascadeClassifier(cv.HAAR_FRONTALFACE_ALT2);
 
 
-module.exports = options=>{
+module.exports = appConfig=>{
 	var router = express.Router();
 
 	/* GET face. */
 	router.get('/', function(req, res, next) {
 		var bucketKey = req.baseUrl.replace(/^\/process-opencv\/+/g, '');
 		var rekogOptions = {
-			AWS : options.AWS,
-			bucket : options.bucketName,
+			AWS : appConfig.AWS,
+			bucket : appConfig.bucketName,
 			bucketKey : bucketKey,
-			table : options.table
+			table : appConfig.table
 		};
 		require('./OpenCVRecog').process(rekogOptions).then(data=>{
+			appConfig.utils.CacheUtils.clear("requestCache", bucketKey);
 			res.end(JSON.stringify(data));
 		}).catch(err=>{
 			res.end(err);

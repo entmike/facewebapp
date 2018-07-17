@@ -1,19 +1,17 @@
 var express = require('express');
 const querystring = require("querystring");
 
-module.exports = options=>{
+module.exports = appConfig=>{
 	var router = express.Router();
 
-	var PhotoUtils = require('./PhotoUtils')({
-		AWS : options.AWS
-	});
+	var PhotoUtils = require('./PhotoUtils')(appConfig);
 
 	/* GET face. */
 	router.get('/', function(req, res, next) {
 		var bucketKey = req.baseUrl.replace(/^\/showface\/+/g, '');
 		if(req.query.face){
 			PhotoUtils.showFace({
-				bucket : options.bucketName,
+				bucket : appConfig.bucketName,
 				bucketKey : bucketKey,
 				face : req.query.face
 			}).then(image=>{
@@ -23,7 +21,7 @@ module.exports = options=>{
 			});
 		}else if(req.query.cvface){
 			PhotoUtils.showFaceCV({
-				bucket : options.bucketName,
+				bucket : appConfig.bucketName,
 				bucketKey : bucketKey,
 				face : req.query.cvface
 			}).then(image=>{
