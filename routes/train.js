@@ -41,6 +41,8 @@ module.exports = appConfig=>{
 					res.end(data);
 				});
 			}
+		}).catch(err=>{
+			res.end(err.message);
 		});
 	});
 	return router;
